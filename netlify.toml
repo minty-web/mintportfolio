@@ -1,0 +1,7 @@
+# Netlify builds Next.js automatically (official Next.js runtime).
+# Env vars (ADMIN_USERNAME, ADMIN_PASSWORD_HASH, SESSION_SECRET, ...) are set
+# in the Netlify dashboard — never commit them.
+[build]
+  command = "npm run build"
+
+# Netlify Blobs are enabled by default; no config needed for them.
