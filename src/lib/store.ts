@@ -6,33 +6,42 @@ import type { PublicProject } from "./types";
  * Storage backend.
  *
  * - On Netlify: the whole project list lives in one key of a Netlify Blob
- *   store. No database, no migrations — the store is enabled by default on
- *   Netlify.
+ *   store. No database, no migrations — blobs are enabled by default.
  * - Locally (`next dev` without the Netlify CLI): a plain JSON file, so
  *   development needs zero extra tooling.
  *
- * Backend selection (in priority order):
- *   `STORAGE=netlify`  → Netlify Blobs
- *   `STORAGE=local`    → local JSON file
- *   Netlify runtime    → Netlify Blobs  (NETLIFY=true is set by Netlify)
- *   otherwise          → local JSON file
+ * Backend selection:
+ *   `STORAGE=netlify` / `STORAGE=local` force a backend explicitly.
+ *   Otherwise we probe Netlify Blobs directly: `getStore()` throws outside a
+ *   Netlify environment, so a successful call means we are on Netlify. This
+ *   avoids relying on `NETLIFY`/`NETLIFY_SITE_ID` env vars, which are not
+ *   always visible to Netlify's Next.js server runtime.
  */
 
 const LOCAL_FILE = path.join(process.cwd(), ".data", "projects.json");
 
-function detectNetlify(): boolean {
-  if (process.env.STORAGE === "netlify") return true;
-  if (process.env.STORAGE === "local") return false;
-  return (
-    process.env.NETLIFY === "true" ||
-    Boolean(process.env.NETLIFY_SITE_ID && !process.env.STORAGE)
-  );
+let backend: "netlify" | "local" | null = null;
+
+async function resolveBackend(): Promise<"netlify" | "local"> {
+  if (backend) return backend;
+
+  if (process.env.STORAGE === "netlify") {
+    backend = "netlify";
+  } else if (process.env.STORAGE === "local") {
+    backend = "local";
+  } else {
+    try {
+      const { getStore } = await import("@netlify/blobs");
+      getStore({ name: "portfolio" }); // throws outside a Netlify environment
+      backend = "netlify";
+    } catch {
+      backend = "local";
+    }
+  }
+
+  console.log(`[store] using ${backend} storage`);
+  return backend;
 }
-
-const useNetlify = detectNetlify();
-
-// Log once so the Netlify function logs show which backend is in use.
-console.log(`[store] using ${useNetlify ? "Netlify Blobs" : "local JSON file"} storage (STORAGE=${process.env.STORAGE ?? "unset"}, NETLIFY=${process.env.NETLIFY ?? "unset"})`);
 
 async function readLocal(): Promise<PublicProject[] | null> {
   try {
@@ -64,7 +73,8 @@ async function writeBlob(projects: PublicProject[]): Promise<void> {
 
 export async function readProjects(): Promise<PublicProject[]> {
   try {
-    const data = useNetlify ? await readBlob() : await readLocal();
+    const data =
+      (await resolveBackend()) === "netlify" ? await readBlob() : await readLocal();
     return data ?? [];
   } catch (err) {
     console.error("[store] readProjects failed:", err);
@@ -76,7 +86,7 @@ export async function readProjects(): Promise<PublicProject[]> {
 
 export async function writeProjects(projects: PublicProject[]): Promise<void> {
   try {
-    if (useNetlify) {
+    if ((await resolveBackend()) === "netlify") {
       await writeBlob(projects);
     } else {
       await writeLocal(projects);
