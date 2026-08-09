@@ -61,6 +61,20 @@ export async function verifyCredentials(
     const p = Number(parts[3]);
     const salt = Buffer.from(parts[4], "hex");
     const expected = Buffer.from(parts[5], "hex");
+    if (
+      !Number.isInteger(N) ||
+      !Number.isInteger(r) ||
+      !Number.isInteger(p) ||
+      N <= 0 ||
+      r <= 0 ||
+      p <= 0 ||
+      salt.length === 0 ||
+      expected.length === 0
+    ) {
+      throw new Error(
+        "ADMIN_PASSWORD_HASH is malformed. Generate a valid hash with `npm run hash-password \"your-password\"`."
+      );
+    }
     const actual = crypto.scryptSync(password, salt, expected.length, { N, r, p });
     return timingSafeEqualBuf(actual, expected);
   }
