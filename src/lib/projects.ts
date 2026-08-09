@@ -69,9 +69,12 @@ export async function updateProject(
   return updated;
 }
 
-export async function deleteProject(id: string): Promise<void> {
+/** Delete a project and return the thumbnail URL of the removed project. */
+export async function deleteProject(id: string): Promise<string | null> {
   const projects = await readProjects();
+  const removed = projects.find((p) => p.id === id);
   await persist(projects.filter((p) => p.id !== id));
+  return removed?.thumbnail ?? null;
 }
 
 /** Swap a project with its neighbour in the admin-defined order. */

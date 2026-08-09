@@ -22,7 +22,7 @@ const LOCAL_FILE = path.join(process.cwd(), ".data", "projects.json");
 
 let backend: "netlify" | "local" | null = null;
 
-async function resolveBackend(): Promise<"netlify" | "local"> {
+export async function resolveBackend(): Promise<"netlify" | "local"> {
   if (backend) return backend;
 
   if (process.env.STORAGE === "netlify") {

@@ -68,15 +68,24 @@ export function ProjectForm({ project }: { project?: PublicProject }) {
       </label>
 
       <label className="block">
-        <span className={labelClass}>Thumbnail URL</span>
-        <input
-          name="thumbnail"
-          defaultValue={project?.thumbnail}
-          placeholder="https://… or /uploads/…"
-          className={inputClass}
-        />
+        <span className={labelClass}>Thumbnail image</span>
+        <div className="space-y-2">
+          <input
+            name="thumbnail"
+            defaultValue={project?.thumbnail}
+            placeholder="https://… or leave empty to upload"
+            className={inputClass}
+          />
+          <input
+            type="file"
+            name="thumbnailFile"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+            className="block w-full text-sm text-zinc-500 file:mr-3 file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-sm file:text-white file:hover:bg-zinc-700"
+          />
+        </div>
         <span className="mt-1 block text-xs text-zinc-400">
-          Paste an image URL. A placeholder block is shown if empty or broken.
+          Upload an image (JPG, PNG, WebP, GIF, AVIF — max 5 MB) or paste a URL.
+          Uploading replaces the URL. A placeholder is shown if both are empty.
         </span>
       </label>
 

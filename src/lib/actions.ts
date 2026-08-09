@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSession, destroySession, requireAdmin, verifyCredentials } from "@/lib/auth";
 import { createProject, deleteProject, moveProject, updateProject } from "@/lib/projects";
 import type { ProjectInput } from "@/lib/projects";
+import { IMAGE_TYPES, MAX_UPLOAD_BYTES, deleteImage, saveImage } from "@/lib/images";
 
 type ActionState = { error?: string } | undefined;
 
@@ -81,6 +82,35 @@ function parseProjectForm(formData: FormData): ProjectInput | { error: string } 
   return { title, description, url, thumbnail, tags, featured };
 }
 
+/**
+ * If a thumbnail file was uploaded, validate and store it, returning its URL.
+ * Otherwise keep the thumbnail value from the form (URL or empty).
+ */
+async function resolveThumbnail(
+  formData: FormData,
+  fallback: string
+): Promise<{ thumbnail: string } | { error: string }> {
+  const file = formData.get("thumbnailFile");
+
+  if (!file || typeof file === "string" || file.size === 0) {
+    return { thumbnail: fallback };
+  }
+
+  const ext = IMAGE_TYPES[file.type as keyof typeof IMAGE_TYPES];
+  if (!ext) {
+    return {
+      error: "Unsupported image type. Use JPG, PNG, WebP, GIF, or AVIF.",
+    };
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { error: "Image must be under 5 MB." };
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const thumbnail = await saveImage(bytes, ext);
+  return { thumbnail };
+}
+
 export async function createProjectAction(
   _prev: ActionState,
   formData: FormData
@@ -90,8 +120,11 @@ export async function createProjectAction(
   const input = parseProjectForm(formData);
   if ("error" in input) return input;
 
+  const thumbnail = await resolveThumbnail(formData, input.thumbnail);
+  if ("error" in thumbnail) return thumbnail;
+
   try {
-    await createProject(input);
+    await createProject({ ...input, thumbnail: thumbnail.thumbnail });
   } catch (err) {
     console.error("[admin] createProject failed:", err);
     return {
@@ -117,8 +150,11 @@ export async function updateProjectAction(
   const input = parseProjectForm(formData);
   if ("error" in input) return input;
 
+  const thumbnail = await resolveThumbnail(formData, input.thumbnail);
+  if ("error" in thumbnail) return thumbnail;
+
   try {
-    await updateProject(id, input);
+    await updateProject(id, { ...input, thumbnail: thumbnail.thumbnail });
   } catch (err) {
     console.error("[admin] updateProject failed:", err);
     return {
@@ -137,7 +173,10 @@ export async function deleteProjectAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
-  await deleteProject(id);
+  const deletedThumbnail = await deleteProject(id);
+  if (deletedThumbnail?.startsWith("/api/image/uploads/")) {
+    await deleteImage(deletedThumbnail);
+  }
   revalidatePath("/");
   revalidatePath("/admin");
 }
