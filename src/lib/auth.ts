@@ -9,7 +9,7 @@ function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error(
-      "SESSION_SECRET is not set (or is too short). Add a value of at least 32 characters to your .env file."
+      "SESSION_SECRET is not set (or is too short). Set SESSION_SECRET to at least 32 characters in the Netlify environment variables and redeploy."
     );
   }
   return secret;

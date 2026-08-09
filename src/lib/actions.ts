@@ -34,7 +34,14 @@ export async function loginAction(
     return { error: "Invalid username or password." };
   }
 
-  await createSession();
+  try {
+    await createSession();
+  } catch {
+    return {
+      error:
+        "Login failed — the server is not configured. Add SESSION_SECRET (and ADMIN_USERNAME / ADMIN_PASSWORD_HASH) to the Netlify environment variables, then redeploy.",
+    };
+  }
   redirect("/admin");
 }
 

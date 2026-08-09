@@ -49,14 +49,28 @@ async function writeBlob(projects: PublicProject[]): Promise<void> {
 }
 
 export async function readProjects(): Promise<PublicProject[]> {
-  const data = useNetlify ? await readBlob() : await readLocal();
-  return data ?? [];
+  try {
+    const data = useNetlify ? await readBlob() : await readLocal();
+    return data ?? [];
+  } catch (err) {
+    console.error("[store] readProjects failed:", err);
+    throw new Error(
+      "Could not read project data from storage. Check the server logs."
+    );
+  }
 }
 
 export async function writeProjects(projects: PublicProject[]): Promise<void> {
-  if (useNetlify) {
-    await writeBlob(projects);
-  } else {
-    await writeLocal(projects);
+  try {
+    if (useNetlify) {
+      await writeBlob(projects);
+    } else {
+      await writeLocal(projects);
+    }
+  } catch (err) {
+    console.error("[store] writeProjects failed:", err);
+    throw new Error(
+      "Could not write project data to storage. Check the server logs."
+    );
   }
 }
