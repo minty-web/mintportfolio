@@ -92,8 +92,12 @@ export async function createProjectAction(
 
   try {
     await createProject(input);
-  } catch {
-    return { error: "Could not save the project. Please try again." };
+  } catch (err) {
+    console.error("[admin] createProject failed:", err);
+    return {
+      error:
+        "Could not save the project. Check the Netlify function logs (look for `[store]`) for the exact cause.",
+    };
   }
 
   revalidatePath("/");
@@ -115,8 +119,12 @@ export async function updateProjectAction(
 
   try {
     await updateProject(id, input);
-  } catch {
-    return { error: "Could not save the project. Please try again." };
+  } catch (err) {
+    console.error("[admin] updateProject failed:", err);
+    return {
+      error:
+        "Could not save the project. Check the Netlify function logs (look for `[store]`) for the exact cause.",
+    };
   }
 
   revalidatePath("/");

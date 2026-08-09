@@ -11,14 +11,28 @@ import type { PublicProject } from "./types";
  * - Locally (`next dev` without the Netlify CLI): a plain JSON file, so
  *   development needs zero extra tooling.
  *
- * Selection: `NETLIFY=true` is set by Netlify automatically at build and
- * runtime. `STORAGE=netlify` / `STORAGE=local` forces either side.
+ * Backend selection (in priority order):
+ *   `STORAGE=netlify`  → Netlify Blobs
+ *   `STORAGE=local`    → local JSON file
+ *   Netlify runtime    → Netlify Blobs  (NETLIFY=true is set by Netlify)
+ *   otherwise          → local JSON file
  */
 
 const LOCAL_FILE = path.join(process.cwd(), ".data", "projects.json");
 
-const useNetlify =
-  process.env.NETLIFY === "true" || process.env.STORAGE === "netlify";
+function detectNetlify(): boolean {
+  if (process.env.STORAGE === "netlify") return true;
+  if (process.env.STORAGE === "local") return false;
+  return (
+    process.env.NETLIFY === "true" ||
+    Boolean(process.env.NETLIFY_SITE_ID && !process.env.STORAGE)
+  );
+}
+
+const useNetlify = detectNetlify();
+
+// Log once so the Netlify function logs show which backend is in use.
+console.log(`[store] using ${useNetlify ? "Netlify Blobs" : "local JSON file"} storage (STORAGE=${process.env.STORAGE ?? "unset"}, NETLIFY=${process.env.NETLIFY ?? "unset"})`);
 
 async function readLocal(): Promise<PublicProject[] | null> {
   try {
