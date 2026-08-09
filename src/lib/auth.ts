@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import crypto from "node:crypto";
+import { siteConfig } from "./site";
 
 const SESSION_COOKIE = "admin_session";
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -17,7 +18,7 @@ function getSessionSecret(): string {
 
 function isHttpsSite(): boolean {
   try {
-    return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").protocol === "https:";
+    return new URL(siteConfig.url).protocol === "https:";
   } catch {
     return false;
   }
